@@ -83,7 +83,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-public String[] getJSONResponse{
+public String[] getJSONResponse(){
         String[] jsonData = new String[7];
         JSONObject jsonWeather = null;
                 try{
