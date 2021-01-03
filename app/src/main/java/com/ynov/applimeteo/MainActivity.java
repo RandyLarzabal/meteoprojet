@@ -1,197 +1,173 @@
 package com.ynov.applimeteo;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import android.content.Context;
 import android.content.pm.PackageManager;
-import android.graphics.Typeface;
 import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.StrictMode;
-import android.text.Html;
-import android.util.JsonReader;
 import android.util.Log;
 import android.view.WindowManager;
 import android.widget.TextView;
 
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.tasks.OnSuccessListener;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.StreamTokenizer;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.text.DateFormat;
-import java.util.Date;
-import java.util.Locale;
-
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
-public class MainActivity extends AppCompatActivity {
 
-    private static final String OPEN_WEATHER_MAP_URL = "http://api.openweathermap.org/data/2.5/weather?lat=%s&lon=%s&units=metric";
-    private static final String OPEN_WEATHER_MAP_API = "55445d877dfb920c711c4a38500eaa1d";
+public class MainActivity extends AppCompatActivity implements LocationListener {
+
+    private static final String OPEN_WEATHER_MAP_URL = "https://www.prevision-meteo.ch/services/json/";
+    private static Context context;
 
     TextView cityField, detailsField, currentTemperatureField, humidtyField, pressureField, weatherIcon, updatedField;
-    Typeface weatherFont;
     static String latitude;
     static String longitude;
+    protected LocationManager locationManager;
+    TextView txtLat;
 
 
+    @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
 
+        context = getApplicationContext();
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getSupportActionBar().hide();
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
-        requestPermissions();
+        //requestPermissions();
 
-        FusedLocationProviderClient mFusedLocationProviderClient;
-        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
 
-        if (ActivityCompat.checkSelfPermission(MainActivity.this,ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(MainActivity.this, ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
 
-        mFusedLocationProviderClient.getLastLocation().addOnSuccessListener(MainActivity.this, new OnSuccessListener<Location>() {
+        txtLat = (TextView) findViewById(R.id.city_field);
+
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        latitude = String.valueOf(location.getLatitude());
+        longitude = String.valueOf(location.getLongitude());
+        getJSONResponse("location", latitude, longitude);
+    }
+
+    public void getJSONResponse(String type, String lat,String lng) {
+        try {
+            switch (type) {
+                case "location":
+                    getWeatherJsonPosition(lat, lng);
+                    break;
+                case "ville":
+                    getWeatherJsonVille("Toulouse");
+                    break;
+            }
+
+        } catch (Exception e) {
+            Log.d("Error", "Cannot process Json Result", e);
+        }
+    }
+
+    public void JsonRenderPosition(JSONObject meteoValue) {
+        try {
+
+            String temperature = meteoValue.getString("tmp");
+            String condition = meteoValue.getString("condition");
+            String icon = meteoValue.getString("icon");
+            String humidity = meteoValue.getString("humidity");
+
+            currentTemperatureField = findViewById(R.id.current_temperature);
+            currentTemperatureField.setText(temperature);
+
+        } catch (Exception e) {
+            Log.d("Error", "Error");
+        }
+    }
+
+    public void getWeatherJsonPosition(String lat, String lon) {
+        RequestQueue queue = Volley.newRequestQueue(context);
+
+        String url = OPEN_WEATHER_MAP_URL + "lat=" + lat + "lng=" + lon;
+        Log.v("url", url);
+        final JSONObject jObjCurrent = new JSONObject();
+
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        try {
+                            JSONObject jObj = new JSONObject(response);
+                            Log.v("object", jObj.toString());
+                            jObjCurrent.put("tmp", jObj.getJSONObject("current_condition").getString("tmp"));
+                            jObjCurrent.put("condition", jObj.getJSONObject("current_condition").getString("condition"));
+                            jObjCurrent.put("icon", jObj.getJSONObject("current_condition").getString("icon"));
+                            jObjCurrent.put("humidity", jObj.getJSONObject("current_condition").getString("humidity"));
+                            JsonRenderPosition(jObjCurrent);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }, new Response.ErrorListener() {
             @Override
-            public void onSuccess(Location location) {
-                if (location != null){
-                    latitude = String.valueOf(location.getLatitude());
-                    longitude = String.valueOf(location.getLongitude());
-
-                    weatherFont = Typeface.createFromAsset(getApplicationContext().getAssets(),"fonts/weathericons-regular-webfont.ttf");
-
-                    cityField= findViewById(R.id.city_field);
-                    currentTemperatureField= findViewById(R.id.current_temperature);
-                    updatedField= findViewById(R.id.updated_field);
-                    detailsField= findViewById(R.id.details_field);
-                    humidtyField= findViewById(R.id.humidity_field);
-                    pressureField= findViewById(R.id.pressure_field);
-                    weatherIcon= findViewById(R.id.weather_icon);
-                    weatherIcon.setTypeface(weatherFont);
-
-                    String[] jsonData = getJSONResponse();
-
-                    cityField.setText(jsonData[0]);
-                    detailsField.setText(jsonData[1]);
-                    currentTemperatureField.setText(jsonData[2]);
-                    humidtyField.setText("Humidity : " + jsonData[3]);
-                    pressureField.setText("Pressure : " + jsonData[4]);
-                    updatedField.setText(jsonData[5]);
-                    weatherIcon.setText(Html.fromHtml(jsonData[6]));
-
-                }
-            }
-        });
-    }
-    public String[] getJSONResponse(){
-        String[] jsonData = new String[7];
-        JSONObject jsonWeather = null;
-        try{
-            jsonWeather = getWeatherJson(latitude,longitude);
-        }catch (Exception e){
-            Log.d("Error","Cannot process Json Result", e);
-        }
-        try {
-            if (jsonWeather != null){
-                JSONObject details = jsonWeather.getJSONArray("weather").getJSONObject(0);
-                JSONObject main = jsonWeather.getJSONObject("main");
-                DateFormat df = DateFormat.getDateInstance();
-
-                String city = jsonWeather.getString("name")+", "+jsonWeather.getJSONObject("sys").getString("country");
-                String description = details.getString("description").toLowerCase(Locale.FRANCE);
-                String temperature = String.format("%.0f", main.getDouble("temp")) + "°";
-                String humidity = main.getString("humidity") + "%";
-                String pressure = main.getString("pressure") + "hPa";
-                String updateOn = df.format(new Date(jsonWeather.getLong("dt")*1000));
-                String iconText = setWeatherIcon(details.getInt("id"), jsonWeather.getJSONObject("sys").getLong("sunrise")*1000,
-                    jsonWeather.getJSONObject("sys").getLong("sunset")*1000);
-
-                jsonData[0] = city;
-                jsonData[1] = description;
-                jsonData[2] = temperature;
-                jsonData[3] = humidity;
-                jsonData[4] = pressure;
-                jsonData[5] = updateOn;
-                jsonData[6] = iconText;
+            public void onErrorResponse(VolleyError error) {
 
             }
-        } catch (Exception e) {
-            Log.d("Error","Error");
         }
-        return jsonData;
+        );
+        queue.add(stringRequest);
     }
 
-    public static String setWeatherIcon(int actualId, long sunrise, long sunset){
-        int id = actualId / 100;
-        String icon = "";
-        if(actualId == 800){
-            long currentTime = new Date().getTime();
-            if(currentTime >= sunrise && currentTime < sunset){
-                icon = "&#xf00d;";
-            }
-            else{
-                icon = "&#xf02e;";
-            }
-        }
-        else{
-            switch(id){
-                case 2:
-                    icon = "&#xf01e;";
-                    break;
-                case 3:
-                    icon = "&#xf01c;";
-                    break;
-                case 5:
-                    icon = "&#xf019;";
-                    break;
-                case 6:
-                    icon = "&#xf01b;";
-                    break;
-                case 7:
-                    icon = "&#xf014;";
-                    break;
-                case 8:
-                    icon = "&#xf013;";
-                    break;
-            }
-        }
-        return icon;
-    }
+    public void getWeatherJsonVille(String ville) {
+        RequestQueue queue = Volley.newRequestQueue(context);
 
-    public static JSONObject getWeatherJson(String lat, String lon){
-        try {
-            URL url = new URL(String.format(OPEN_WEATHER_MAP_URL,lat,lon));
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.addRequestProperty("x-ap-key",OPEN_WEATHER_MAP_API);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuffer json = new StringBuffer(1024);
-            String tmp = "";
-            while ((tmp = reader.readLine()) != null){
-                json.append(tmp).append("\n");
+        String url = OPEN_WEATHER_MAP_URL + ville;
+        final JSONObject jObjCurrent = new JSONObject();
+
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        try {
+                            JSONObject jObj = new JSONObject(response);
+                            jObjCurrent.put("tmp", jObj.getJSONObject("current_condition").getString("tmp"));
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+
             }
-            reader.close();
-            JSONObject data = new JSONObject(json.toString());
-            if (data.getInt("cod") != 200){
-                return null;
-            }
-            return data;
-        } catch (Exception e) {
-            return null;
         }
-    }
-    private void requestPermissions(){
-        ActivityCompat.requestPermissions(this,new String[]{ACCESS_FINE_LOCATION},1);
+        );
+        queue.add(stringRequest);
     }
 }
