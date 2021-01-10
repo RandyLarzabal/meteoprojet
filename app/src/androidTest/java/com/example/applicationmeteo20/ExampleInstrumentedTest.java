@@ -1,4 +1,4 @@
-package com.ynov.applimeteo;
+package com.example.applicationmeteo20;
 
 import android.content.Context;
 
@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
     public void useAppContext() {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        assertEquals("com.ynov.applimeteo", appContext.getPackageName());
+        assertEquals("com.example.applicationmeteo20", appContext.getPackageName());
     }
 }

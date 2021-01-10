@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/meteoPosition">
+    <fragment
+        android:id="@+id/secondFragment2"
+        android:name="com.example.applicationmeteo20.SecondFragment"
+        android:label="fragment_second"
+        tools:layout="@layout/fragment_second" >
+        <action
+            android:id="@+id/action_secondFragment2_to_settings"
+            app:destination="@id/settings" />
+    </fragment>
+    <fragment
+        android:id="@+id/settings"
+        android:name="com.example.applicationmeteo20.Settings"
+        android:label="fragment_settings"
+        tools:layout="@layout/fragment_settings" />
+    <fragment
+        android:id="@+id/meteoPosition"
+        android:name="com.example.applicationmeteo20.MeteoPosition"
+        android:label="fragment_first"
+        tools:layout="@layout/fragment_first" >
+        <action
+            android:id="@+id/action_meteoPosition_to_meteoVilles"
+            app:destination="@id/meteoVilles" />
+    </fragment>
+    <fragment
+        android:id="@+id/meteoVilles"
+        android:name="com.example.applicationmeteo20.MeteoVilles"
+        android:label="fragment_meteo_villes"
+        tools:layout="@layout/fragment_meteo_villes" >
+        <action
+            android:id="@+id/action_meteoVilles_to_meteoPosition"
+            app:destination="@id/meteoPosition" />
+    </fragment>
+</navigation>

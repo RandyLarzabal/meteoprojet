@@ -1,4 +1,4 @@
-package com.ynov.applimeteo;
+package com.example.applicationmeteo20;
 
 import org.junit.Test;
 
